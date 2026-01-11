@@ -1,4 +1,4 @@
-import { v, ConvexError } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 export const getTodos = query({
@@ -10,13 +10,26 @@ export const getTodos = query({
 
 export const addTodo = mutation({
     args: { text: v.string() },
-    handler: async (convexToJson, args) => {
-        const todoId = await convexToJson.db.insert("todos", {
+    handler: async (ctx, args) => {
+        const todoId = await ctx.db.insert("todos", {
             text: args.text,
             isCompleted: false,
         });
 
         return todoId;
+    },
+});
+
+export const updateTodo = mutation({
+    args: { id: v.id("todos"), text: v.string() },
+    handler: async (ctx, args) => {
+        const todo = await ctx.db.get(args.id);
+        if (!todo) throw new ConvexError("Todo not found");
+
+        const nextText = args.text.trim();
+        if (!nextText) throw new ConvexError("Todo text cannot be empty");
+
+        await ctx.db.patch(args.id, { text: nextText });
     },
 });
 
